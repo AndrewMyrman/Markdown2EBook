@@ -1,0 +1,1995 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Markdown to Kindle EPUB</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <style>
+:root {
+  --bg: #f4f4f1;
+  --surface: #ffffff;
+  --surface-alt: #ffffff;
+  --surface-muted: #e7e7e1;
+  --text: #111111;
+  --text-soft: #444444;
+  --text-faint: #666666;
+  --border: #1f1f1f;
+  --border-soft: #7a7a7a;
+  --focus: #000000;
+
+  --radius: 0;
+  --content-width: 1320px;
+
+  --space-1: 8px;
+  --space-2: 12px;
+  --space-3: 16px;
+  --space-4: 20px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 40px;
+
+  --shadow: none;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  width: 100%;
+  min-height: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: "Segoe UI", system-ui, -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  min-height: 100vh;
+  padding: var(--space-4);
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.app {
+  width: min(100%, var(--content-width));
+  margin: 0 auto;
+  background: var(--surface);
+  border: 2px solid var(--border);
+  padding: var(--space-6);
+}
+
+.header {
+  margin-bottom: var(--space-6);
+  text-align: center;
+  border-bottom: 1px solid var(--border);
+  padding-bottom: var(--space-5);
+}
+
+.eyebrow {
+  display: inline-block;
+  font-size: 0.78rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--text-soft);
+}
+
+.title {
+  margin: var(--space-2) 0 0;
+  font-size: clamp(1.8rem, 3vw, 2.4rem);
+  line-height: 1.15;
+  font-weight: 700;
+}
+
+.subtitle {
+  margin: var(--space-2) auto 0;
+  max-width: 62ch;
+  color: var(--text-soft);
+  font-size: 1rem;
+  line-height: 1.6;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(320px, 0.9fr);
+  gap: var(--space-5);
+  align-items: start;
+}
+
+.column {
+  min-width: 0;
+}
+
+.stack {
+  display: grid;
+  gap: var(--space-4);
+}
+
+.card,
+.panel,
+.output-card {
+  background: var(--surface);
+  border: 2px solid var(--border);
+  padding: var(--space-5);
+}
+
+.card + .card,
+.panel + .panel,
+.output-card + .output-card {
+  margin-top: var(--space-4);
+}
+
+.sidebar {
+  position: sticky;
+  top: var(--space-4);
+}
+
+.header-row {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: var(--space-3);
+  margin-bottom: var(--space-2);
+}
+
+.header-row h1,
+.card h2 {
+  margin: 0;
+  font-size: 1.3rem;
+  line-height: 1.2;
+}
+
+.card h2 {
+  margin-bottom: var(--space-4);
+  padding-bottom: var(--space-2);
+  border-bottom: 1px solid var(--border-soft);
+  font-size: 0.88rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.subtle {
+  color: var(--text-soft);
+  line-height: 1.6;
+}
+
+.row {
+  display: grid;
+  gap: var(--space-2);
+}
+
+label {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+input[type="text"],
+input[type="number"],
+input[type="file"],
+select,
+textarea {
+  width: 100%;
+  appearance: none;
+  border: 2px solid var(--border);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--text);
+  padding: 14px 16px;
+  line-height: 1.4;
+  box-shadow: none;
+}
+
+textarea {
+  min-height: 72vh;
+  resize: vertical;
+  line-height: 1.55;
+}
+
+input[type="file"] {
+  padding: 12px 14px;
+  background: var(--surface-alt);
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+  outline: 3px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.input-hint {
+  color: var(--text-soft);
+  font-size: 0.92rem;
+  line-height: 1.5;
+}
+
+.actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: var(--space-3);
+}
+
+button,
+.button {
+  appearance: none;
+  border: 2px solid var(--border);
+  border-radius: 0;
+  min-height: 54px;
+  padding: 14px 18px;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  cursor: pointer;
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: none;
+  transition: background 120ms ease, opacity 120ms ease, transform 120ms ease;
+}
+
+button:hover,
+.button:hover {
+  background: var(--surface-alt);
+}
+
+button:active,
+.button:active {
+  background: var(--surface-muted);
+  transform: translateY(1px);
+}
+
+button:focus-visible,
+.button:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+
+button:disabled,
+.button:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+  background: var(--surface);
+}
+
+button.primary,
+.button.primary,
+#generateBtn {
+  background: var(--text);
+  color: var(--surface);
+}
+
+button.primary:hover,
+.button.primary:hover,
+#generateBtn:hover {
+  background: #2a2a2a;
+}
+
+button.secondary,
+.button.secondary {
+  background: var(--surface);
+  color: var(--text);
+}
+
+#exportHtmlBtn {
+  background: var(--surface);
+  color: var(--text);
+}
+
+.toolbar {
+  display: grid;
+  gap: var(--space-3);
+}
+
+.insert-group {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: var(--space-2);
+}
+
+.message,
+.status,
+.notice,
+.warning,
+.error,
+.success {
+  border: 2px solid var(--border);
+  border-radius: 0;
+  background: var(--surface-alt);
+  color: var(--text);
+  padding: var(--space-4);
+  line-height: 1.6;
+}
+
+.message[hidden] {
+  display: none !important;
+}
+
+.preview {
+  display: block;
+  width: 100%;
+  margin-top: var(--space-3);
+  border: 2px solid var(--border);
+  background: var(--surface-alt);
+  object-fit: contain;
+  max-height: 320px;
+}
+
+.meta-list {
+  display: grid;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border-soft);
+  background: var(--surface-alt);
+}
+
+.tag-wrap {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.tag {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 6px 10px;
+  border: 2px solid var(--border);
+  background: var(--surface-alt);
+  font-size: 0.88rem;
+  line-height: 1.2;
+}
+
+.tag.outline {
+  background: var(--surface);
+}
+
+.check {
+  display: grid;
+  grid-template-columns: 20px 1fr;
+  gap: var(--space-3);
+  align-items: start;
+  padding: var(--space-3) 0;
+  border-top: 1px solid var(--border-soft);
+}
+
+.check:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.check:last-child {
+  padding-bottom: 0;
+}
+
+.icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.error-box,
+.warn-box {
+  border: 2px solid var(--border);
+  padding: var(--space-3);
+  line-height: 1.6;
+  margin-bottom: var(--space-3);
+}
+
+.error-box {
+  background: #ece8e1;
+}
+
+.warn-box {
+  background: var(--surface-alt);
+}
+
+.quick-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--space-2);
+}
+
+.stat {
+  border: 2px solid var(--border);
+  padding: 12px;
+  background: var(--surface);
+}
+
+.stat-label {
+  display: block;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: var(--text-faint);
+  margin-bottom: 6px;
+}
+
+.stat-value {
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.compact-card {
+  padding: var(--space-4);
+}
+
+.compact-card h2 {
+  margin-bottom: var(--space-3);
+}
+
+details.compact-details {
+  border: 2px solid var(--border);
+  background: var(--surface);
+}
+
+details.compact-details + details.compact-details {
+  margin-top: var(--space-4);
+}
+
+details.compact-details summary {
+  list-style: none;
+  cursor: pointer;
+  padding: var(--space-4);
+  font-size: 0.88rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  border-bottom: 1px solid transparent;
+}
+
+details.compact-details summary::-webkit-details-marker {
+  display: none;
+}
+
+details.compact-details[open] summary {
+  border-bottom-color: var(--border-soft);
+}
+
+.details-body {
+  padding: var(--space-4);
+}
+
+.notes-compact .error-box,
+.notes-compact .warn-box {
+  margin-bottom: var(--space-2);
+}
+
+.notes-compact .error-box:last-child,
+.notes-compact .warn-box:last-child {
+  margin-bottom: 0;
+}
+
+code,
+pre {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+pre {
+  margin: 0;
+  background: var(--surface-alt);
+  border: 2px solid var(--border);
+  padding: var(--space-4);
+  overflow: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+hr {
+  border: 0;
+  border-top: 1px solid var(--border-soft);
+  margin: var(--space-5) 0;
+}
+
+@media (max-width: 1040px) {
+  .layout {
+    grid-template-columns: 1fr;
+  }
+
+  .sidebar {
+    position: static;
+  }
+
+  textarea {
+    min-height: 56vh;
+  }
+}
+
+@media (max-width: 700px) {
+  body {
+    padding: var(--space-2);
+  }
+
+  .app {
+    padding: var(--space-4);
+  }
+
+  .card,
+  .panel,
+  .output-card {
+    padding: var(--space-4);
+  }
+
+  .actions,
+  .insert-group,
+  .quick-stats {
+    grid-template-columns: 1fr;
+  }
+
+  .header {
+    text-align: left;
+  }
+
+  .subtitle {
+    margin-left: 0;
+    margin-right: 0;
+  }
+
+  textarea {
+    min-height: 50vh;
+  }
+}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="header">
+      <div class="eyebrow">Ebook Generator</div>
+      <h1 class="title">Markdown2Ebook</h1>
+      <p class="subtitle">
+        Paste manuscript markdown, upload a cover, inspect structure, and export a reflowable EPUB package structured for Kindle Direct Publishing.
+      </p>
+    </header>
+
+    <div class="layout">
+      <main class="column stack">
+        <section class="card">
+          <div class="header-row">
+            <h2 style="border:none; padding:0; margin:0; font-size:1.1rem; text-transform:none; letter-spacing:0;">Manuscript</h2>
+          </div>
+
+          <div class="row">
+            <label for="markdown">Manuscript markdown</label>
+            <textarea id="markdown" spellcheck="false"></textarea>
+            <div class="input-hint">
+              Use <code>#</code> for the metadata line and every major section or chapter. The first H1 must be in the format:
+              <code># Book Title by Author Name</code>
+            </div>
+          </div>
+        </section>
+
+        <section class="card notes-compact">
+          <h2>Notes</h2>
+          <div id="notes"></div>
+        </section>
+      </main>
+
+      <aside class="column sidebar stack">
+        <section class="card">
+          <h2>Export</h2>
+
+          <div class="toolbar">
+            <div class="row">
+              <label for="cover">Cover upload</label>
+              <input id="cover" type="file" accept="image/jpeg,image/png,image/webp" />
+              <p class="subtle" style="font-size:0.9rem; margin:0;">
+                JPEG preferred. A single internal cover image is embedded in the EPUB package.
+              </p>
+              <img id="coverPreview" class="preview" alt="Cover preview" hidden />
+              <div id="coverDimensions" class="subtle" style="font-size:0.92rem;"></div>
+            </div>
+
+            <div class="row">
+              <label for="insertSection">Insert section template</label>
+              <div class="insert-group">
+                <select id="insertSection">
+                  <option value="">Choose a section…</option>
+                  <option value="blurbs">Blurbs</option>
+                  <option value="half-title">Half Title</option>
+                  <option value="dedication">Dedication</option>
+                  <option value="epigraph">Epigraph</option>
+                  <option value="foreword">Foreword</option>
+                  <option value="introduction">Introduction</option>
+                  <option value="preface">Preface</option>
+                  <option value="prologue">Prologue</option>
+                  <option value="chapter">Chapter</option>
+                  <option value="epilogue">Epilogue</option>
+                  <option value="afterword">Afterword</option>
+                  <option value="endnotes">Endnotes</option>
+                  <option value="bibliography">Bibliography</option>
+                  <option value="references">References</option>
+                  <option value="acknowledgments">Acknowledgments</option>
+                  <option value="about-the-author">About the Author</option>
+                  <option value="also-by">Also By</option>
+                </select>
+                <button type="button" id="insertBtn">Insert</button>
+              </div>
+              <div class="input-hint">
+                Inserts a correctly formatted section template at the cursor position.
+              </div>
+            </div>
+
+            <div class="actions">
+              <button class="primary" id="generateBtn">Generate EPUB</button>
+              <button class="secondary" id="exportHtmlBtn">Export HTML</button>
+            </div>
+
+            <div class="message" id="message" hidden></div>
+          </div>
+        </section>
+
+        <section class="card compact-card">
+          <h2>Snapshot</h2>
+          <div class="quick-stats" id="quickStats"></div>
+        </section>
+
+        <details class="compact-details" open>
+          <summary>Parsed structure</summary>
+          <div class="details-body" id="structure"></div>
+        </details>
+
+        <details class="compact-details">
+          <summary>KDP-oriented checks</summary>
+          <div class="details-body" id="checklist"></div>
+        </details>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const SAMPLE = `# Book by Author
+
+# Chapter 1
+# Book by Author
+
+# Chapter 1
+Use the Insert section template tool on the right to add more sections.
+***
+Or open the file “template” to see a complete template.
+***
+I recommend writing and preparing your manuscript somewhere else first. If you accidentally refresh this page, all changes in this tool will be lost.
+***
+Feel free to delete these instructions and start working on your manuscript.
+***
+P.S. I do not offer support for this free tool.
+***
+P.S.S. Everything happens locally in your web browser. No one can see your manuscript while you use this tool. No one.
+
+
+`;
+
+    const FRONT_MATTER_HEADINGS = new Set([
+      'blurbs', 'half title', 'title page', 'copyright', 'table of contents',
+      'dedication', 'epigraph', 'foreword', 'introduction', 'preface', 'prologue'
+    ]);
+
+    const BACK_MATTER_HEADINGS = new Set([
+      'epilogue', 'afterword', 'endnotes', 'bibliography', 'references',
+      'acknowledgments', 'acknowledgements', 'about the author', 'also by'
+    ]);
+
+    const FRONT_EXPORT_ORDER = ['blurbs', 'half title', 'dedication', 'epigraph', 'foreword', 'introduction', 'preface', 'prologue'];
+    const BACK_EXPORT_ORDER = ['epilogue', 'afterword', 'endnotes', 'bibliography', 'references', 'acknowledgments', 'acknowledgements', 'about the author', 'also by'];
+    const TOC_ALLOWED = new Set(['foreword', 'preface', 'introduction', 'prologue', 'epilogue', 'afterword', 'endnotes', 'bibliography', 'references', 'acknowledgments', 'acknowledgements']);
+
+    const markdownEl = document.getElementById('markdown');
+    const coverEl = document.getElementById('cover');
+    const coverPreviewEl = document.getElementById('coverPreview');
+    const coverDimensionsEl = document.getElementById('coverDimensions');
+    const generateBtn = document.getElementById('generateBtn');
+    const exportHtmlBtn = document.getElementById('exportHtmlBtn');
+    const insertSectionEl = document.getElementById('insertSection');
+    const insertBtn = document.getElementById('insertBtn');
+    const messageEl = document.getElementById('message');
+    const structureEl = document.getElementById('structure');
+    const checklistEl = document.getElementById('checklist');
+    const notesEl = document.getElementById('notes');
+    const quickStatsEl = document.getElementById('quickStats');
+
+    let coverFile = null;
+    let coverMeta = null;
+    markdownEl.value = SAMPLE;
+
+    function headingKey(value) {
+      return (value || '').trim().toLowerCase();
+    }
+
+    function slugify(value) {
+      return value.toLowerCase().replace(/&/g, ' and ').replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') || 'section';
+    }
+
+    function escapeXml(value = '') {
+      return value
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/\"/g, '&quot;')
+        .replace(/'/g, '&apos;');
+    }
+
+    function readFileAsArrayBuffer(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsArrayBuffer(file);
+      });
+    }
+
+    function readFileAsDataURL(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    function splitSections(markdown) {
+      const lines = markdown.replace(/\r\n?/g, '\n').split('\n');
+      const sections = [];
+      const preamble = [];
+      let current = null;
+      for (const line of lines) {
+        const h1 = line.match(/^#\s+(.+)$/);
+        if (h1) {
+          if (current) sections.push(current);
+          current = { heading: h1[1].trim(), lines: [] };
+        } else if (current) {
+          current.lines.push(line);
+        } else if (line.trim()) {
+          preamble.push(line);
+        }
+      }
+      if (current) sections.push(current);
+      return { sections, preamble };
+    }
+
+    function parseTitleAndAuthor(heading) {
+      const match = heading.match(/^(.*?)\s+by\s+(.+)$/i);
+      if (!match) return null;
+      return { title: match[1].trim(), author: match[2].trim() };
+    }
+
+    function sortSections(sections, order) {
+      return sections.slice().sort((a, b) => {
+        const ai = order.indexOf(headingKey(a.heading));
+        const bi = order.indexOf(headingKey(b.heading));
+        return (ai === -1 ? 999 : ai) - (bi === -1 ? 999 : bi);
+      });
+    }
+
+    function classifyBook(markdown) {
+      const { sections, preamble } = splitSections(markdown);
+      const errors = [];
+      const warnings = [];
+      if (preamble.length) warnings.push('Text before the first H1 is ignored. Put all book content under # headings.');
+      if (!sections.length) {
+        errors.push('No H1 headings found. Use # for the title line and every section or chapter.');
+        return { errors, warnings, meta: null, frontMatter: [], chapters: [], backMatter: [], alsoBy: null };
+      }
+
+      const meta = parseTitleAndAuthor(sections[0].heading);
+      if (!meta) {
+        errors.push('The first H1 must be in the format: # Book Title by Author Name');
+        return { errors, warnings, meta: null, frontMatter: [], chapters: [], backMatter: [], alsoBy: null };
+      }
+
+      if (sections[0].lines.some(line => line.trim())) warnings.push('Content under the first title heading is ignored. The first H1 is treated as metadata only.');
+
+      const frontMatter = [];
+      const chapters = [];
+      const backMatter = [];
+      let alsoBy = null;
+
+      sections.slice(1).forEach((section) => {
+        const key = headingKey(section.heading);
+        const entry = { ...section, idBase: slugify(section.heading) };
+        if (FRONT_MATTER_HEADINGS.has(key)) frontMatter.push(entry);
+        else if (key === 'also by') alsoBy = entry;
+        else if (BACK_MATTER_HEADINGS.has(key)) backMatter.push(entry);
+        else chapters.push(entry);
+      });
+
+      if (!chapters.length) errors.push('No body chapters detected. Add at least one chapter after the front matter.');
+
+      return {
+        errors,
+        warnings,
+        meta,
+        frontMatter: sortSections(frontMatter, FRONT_EXPORT_ORDER),
+        chapters,
+        backMatter: sortSections(backMatter, BACK_EXPORT_ORDER),
+        alsoBy
+      };
+    }
+
+    function applyInlineMarkdown(text) {
+      let value = escapeXml(text);
+      value = value.replace(/`([^`]+)`/g, '<code>$1</code>');
+      value = value.replace(/\*\*\*([^*]+)\*\*\*/g, '<strong><em>$1</em></strong>');
+      value = value.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+      value = value.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+      value = value.replace(/_([^_]+)_/g, '<em>$1</em>');
+      return value;
+    }
+
+    function renderMarkdownLines(lines, opts = {}) {
+      const out = [];
+      let listItems = [];
+      let blockquote = [];
+      let firstParagraph = true;
+      let afterSceneBreak = false;
+
+      const pushParagraph = (text) => {
+        const trimmed = text.trim();
+        if (!trimmed) return;
+        const noindent = firstParagraph || afterSceneBreak ? ' class="noindent"' : '';
+        out.push(`<p${noindent}>${applyInlineMarkdown(trimmed)}</p>`);
+        firstParagraph = false;
+        afterSceneBreak = false;
+      };
+
+      const flushList = () => {
+        if (!listItems.length) return;
+        out.push(`<ul>${listItems.map(item => `<li>${applyInlineMarkdown(item)}</li>`).join('')}</ul>`);
+        listItems = [];
+        firstParagraph = false;
+        afterSceneBreak = false;
+      };
+
+      const flushBlockquote = () => {
+        if (!blockquote.length) return;
+        out.push(`<blockquote><p>${applyInlineMarkdown(blockquote.join(' '))}</p></blockquote>`);
+        blockquote = [];
+        firstParagraph = false;
+        afterSceneBreak = false;
+      };
+
+      for (const raw of lines) {
+        const trimmed = raw.trim();
+        if (!trimmed) {
+          flushList();
+          flushBlockquote();
+          continue;
+        }
+        if (/^\*\*\*+$/.test(trimmed)) {
+          flushList();
+          flushBlockquote();
+          out.push('<div class="scene-break" aria-label="Scene break"></div>');
+          firstParagraph = false;
+          afterSceneBreak = true;
+          continue;
+        }
+        const list = trimmed.match(/^-\s+(.+)$/);
+        if (list) {
+          flushBlockquote();
+          listItems.push(list[1].trim());
+          continue;
+        }
+        const quote = trimmed.match(/^>\s?(.*)$/);
+        if (quote) {
+          flushList();
+          blockquote.push(quote[1].trim());
+          continue;
+        }
+        flushList();
+        flushBlockquote();
+        pushParagraph(trimmed);
+      }
+      flushList();
+      flushBlockquote();
+      if (!out.length && opts.allowEmptyPage) out.push('<p class="noindent"> </p>');
+      return out.join('\n');
+    }
+
+    function makeXhtml({ title, body, epubType = 'bodymatter', bodyClass = 'bodymatter' }) {
+      return `<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" lang="en" xml:lang="en">
+<head>
+  <title>${escapeXml(title)}</title>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" type="text/css" href="styles/book.css" />
+</head>
+<body epub:type="${epubType}" class="${bodyClass}">
+${body}
+</body>
+</html>`;
+    }
+
+    function makeTitlePage(meta) {
+      return makeXhtml({
+        title: 'Title Page',
+        epubType: 'titlepage',
+        bodyClass: 'frontmatter titlepage',
+        body: `<section epub:type="titlepage" class="title-page">
+  <h1 class="book-title">${escapeXml(meta.title)}</h1>
+  <p class="byline">by</p>
+  <p class="author-name">${escapeXml(meta.author)}</p>
+</section>`
+      });
+    }
+
+    function makeCopyrightPage(meta, year) {
+      return makeXhtml({
+        title: 'Copyright',
+        epubType: 'copyright-page',
+        bodyClass: 'frontmatter copyright-page',
+        body: `<section epub:type="copyright-page">
+  <h1>Copyright</h1>
+  <p class="noindent">Copyright © ${year} ${escapeXml(meta.author)}</p>
+  <p>All rights reserved.</p>
+  <p>No part of this publication may be reproduced, distributed, or transmitted in any form or by any means, including photocopying, recording, or other electronic or mechanical methods, without the prior written permission of the copyright holder, except in the case of brief quotations embodied in reviews and certain other noncommercial uses permitted by copyright law.</p>
+  <p>This is a work of fiction unless otherwise indicated. Names, characters, businesses, places, events, and incidents are either the products of the author’s imagination or used in a fictitious manner. Any resemblance to actual persons, living or dead, or actual events is purely coincidental.</p>
+</section>`
+      });
+    }
+
+    function makeHeadinglessPage({ title, body, epubType, bodyClass = '', sectionClass = '', anchor }) {
+      return makeXhtml({
+        title,
+        epubType,
+        bodyClass,
+        body: `<section epub:type="${epubType}"${sectionClass ? ` class="${sectionClass}"` : ''}>
+  ${anchor ? `<div id="${escapeXml(anchor)}"></div>` : ''}
+  ${body}
+</section>`
+      });
+    }
+
+    function makeHalfTitlePage(meta, section) {
+      return makeHeadinglessPage({
+        title: 'Half Title',
+        epubType: 'frontmatter',
+        bodyClass: 'frontmatter half-title-page',
+        sectionClass: 'half-title-page',
+        anchor: section.idBase,
+        body: `<p class="half-title-text">${escapeXml(meta.title)}</p>`
+      });
+    }
+
+    function makeDedicationPage(section) {
+      return makeHeadinglessPage({
+        title: 'Dedication',
+        epubType: 'frontmatter',
+        bodyClass: 'frontmatter dedication-page',
+        sectionClass: 'dedication-page',
+        anchor: section.idBase,
+        body: renderMarkdownLines(section.lines, { allowEmptyPage: true })
+      });
+    }
+
+    function makeEpigraphPage(section) {
+      const nonEmpty = section.lines.map(line => line.trim()).filter(Boolean);
+      const quoteLines = [];
+      const attributionLines = [];
+      let seenQuote = false;
+
+      for (const line of nonEmpty) {
+        if (line.startsWith('>')) {
+          seenQuote = true;
+          quoteLines.push(line.replace(/^>\s?/, '').trim());
+        } else if (seenQuote) {
+          attributionLines.push(line);
+        }
+      }
+
+      const body = quoteLines.length
+        ? `<div epub:type="epigraph" class="epigraph-block">
+  <blockquote><p>${applyInlineMarkdown(quoteLines.join(' '))}</p></blockquote>
+  ${attributionLines.length ? `<p class="epigraph-attribution">${applyInlineMarkdown(attributionLines.join(' '))}</p>` : ''}
+</div>`
+        : renderMarkdownLines(section.lines, { allowEmptyPage: true });
+
+      return makeHeadinglessPage({
+        title: 'Epigraph',
+        epubType: 'frontmatter',
+        bodyClass: 'frontmatter epigraph-page',
+        sectionClass: 'epigraph-page',
+        anchor: section.idBase,
+        body
+      });
+    }
+
+    function makeBlurbsPage(section) {
+      return makeHeadinglessPage({
+        title: 'Blurbs',
+        epubType: 'frontmatter',
+        bodyClass: 'frontmatter blurbs-page',
+        sectionClass: 'blurbs-page',
+        anchor: section.idBase,
+        body: renderMarkdownLines(section.lines, { allowEmptyPage: true })
+      });
+    }
+
+    function makeSectionPage(section, epubType, cssClass) {
+      return makeXhtml({
+        title: section.heading,
+        epubType,
+        bodyClass: cssClass,
+        body: `<section epub:type="${epubType}">
+  <h1 id="${escapeXml(section.idBase)}">${escapeXml(section.heading)}</h1>
+  ${renderMarkdownLines(section.lines, { allowEmptyPage: true })}
+</section>`
+      });
+    }
+
+    function makeAlsoByPage(section, author) {
+      const items = section.lines.map(line => line.trim()).filter(Boolean).map(line => line.replace(/^-\s+/, '').trim()).filter(Boolean);
+      const list = items.length ? `<ul class="also-by-list">${items.map(item => `<li>${escapeXml(item)}</li>`).join('')}</ul>` : '<p class="noindent">No titles listed.</p>';
+      return makeXhtml({
+        title: 'Also By',
+        epubType: 'backmatter',
+        bodyClass: 'backmatter also-by',
+        body: `<section epub:type="backmatter">
+  <h1 id="${escapeXml(section.idBase)}">Also By ${escapeXml(author)}</h1>
+  ${list}
+</section>`
+      });
+    }
+
+    function makeNav(entries) {
+      const tocEntries = entries.filter(entry => entry.kind === 'chapter' || TOC_ALLOWED.has(headingKey(entry.label)));
+      const tocItems = tocEntries.map(entry => `<li><a href="${escapeXml(entry.href)}#${escapeXml(entry.anchor)}">${escapeXml(entry.label)}</a></li>`).join('\n');
+      const startReading = entries.find(entry => entry.kind === 'chapter') || tocEntries[0] || { href: 'title.xhtml', anchor: '' };
+      return `<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" xmlns:epub="http://www.idpf.org/2007/ops" lang="en" xml:lang="en">
+<head>
+  <title>Table of Contents</title>
+  <meta charset="utf-8" />
+  <link rel="stylesheet" type="text/css" href="styles/book.css" />
+</head>
+<body epub:type="frontmatter" class="frontmatter toc-page">
+  <nav epub:type="toc" id="toc">
+    <h1>Table of Contents</h1>
+    <ul class="toc-list">${tocItems}</ul>
+  </nav>
+  <nav epub:type="landmarks" hidden="hidden">
+    <ol>
+      <li><a epub:type="titlepage" href="title.xhtml">Title Page</a></li>
+      <li><a epub:type="toc" href="nav.xhtml">Table of Contents</a></li>
+      <li><a epub:type="bodymatter" href="${escapeXml(startReading.href)}#${escapeXml(startReading.anchor)}">Start Reading</a></li>
+    </ol>
+  </nav>
+</body>
+</html>`;
+    }
+
+    function makeNcx(meta, identifier, entries) {
+      const ncxEntries = entries.filter(
+        entry => entry.kind === 'chapter' || TOC_ALLOWED.has(headingKey(entry.label))
+      );
+
+      const navPoints = ncxEntries.map((entry, index) => `<navPoint id="navPoint-${index + 1}" playOrder="${index + 1}">
+  <navLabel><text>${escapeXml(entry.label)}</text></navLabel>
+  <content src="${escapeXml(entry.href)}#${escapeXml(entry.anchor)}" />
+</navPoint>`).join('\n');
+
+      return `<?xml version="1.0" encoding="UTF-8"?>
+<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1">
+  <head>
+    <meta name="dtb:uid" content="${escapeXml(identifier)}" />
+    <meta name="dtb:depth" content="1" />
+    <meta name="dtb:totalPageCount" content="0" />
+    <meta name="dtb:maxPageNumber" content="0" />
+  </head>
+  <docTitle><text>${escapeXml(meta.title)}</text></docTitle>
+  <docAuthor><text>${escapeXml(meta.author)}</text></docAuthor>
+  <navMap>${navPoints}</navMap>
+</ncx>`;
+    }
+
+    function makeOpf({ meta, identifier, modified, manifestItems, spineItems, coverHref, coverMediaType }) {
+      const coverItem = coverHref ? `<item id="cover-image" href="${escapeXml(coverHref)}" media-type="${escapeXml(coverMediaType)}" properties="cover-image" />` : '';
+      const coverMeta = coverHref ? '<meta name="cover" content="cover-image" />' : '';
+      return `<?xml version="1.0" encoding="utf-8"?>
+<package xmlns="http://www.idpf.org/2007/opf" unique-identifier="pub-id" version="3.0">
+  <metadata xmlns:dc="http://purl.org/dc/elements/1.1/">
+    <dc:identifier id="pub-id">${escapeXml(identifier)}</dc:identifier>
+    <dc:title>${escapeXml(meta.title)}</dc:title>
+    <dc:creator>${escapeXml(meta.author)}</dc:creator>
+    <dc:language>en</dc:language>
+    <meta property="dcterms:modified">${escapeXml(modified)}</meta>
+    ${coverMeta}
+  </metadata>
+  <manifest>
+    <item id="nav" href="nav.xhtml" media-type="application/xhtml+xml" properties="nav" />
+    <item id="ncx" href="toc.ncx" media-type="application/x-dtbncx+xml" />
+    <item id="css" href="styles/book.css" media-type="text/css" />
+    ${coverItem}
+    ${manifestItems.join('\n    ')}
+  </manifest>
+  <spine toc="ncx">
+    <itemref idref="nav" linear="no" />
+    ${spineItems.join('\n    ')}
+  </spine>
+</package>`;
+    }
+
+    function makeCss() {
+      return `body {
+  margin: 0;
+  padding: 0;
+  font-family: Palatino, serif;
+  line-height: 1.25;
+}
+section {
+  display: block;
+}
+h1 {
+  text-align: center;
+  font-weight: bold;
+  margin: 0 0 1.5em 0;
+  page-break-after: avoid;
+  break-after: avoid;
+}
+p {
+  margin: 0;
+  text-indent: 1.2em;
+}
+p.noindent,
+blockquote p,
+.title-page p,
+.copyright-page p,
+ul,
+ol,
+.scene-break + p,
+.epigraph-attribution,
+.half-title-text,
+.dedication-page p,
+.blurbs-page p,
+.blurbs-page blockquote p {
+  text-indent: 0;
+}
+ul, ol {
+  margin: 0 0 1em 1.4em;
+  padding: 0;
+}
+li {
+  margin: 0.2em 0;
+}
+blockquote {
+  margin: 1em 1.5em;
+}
+.frontmatter section,
+.backmatter section,
+.copyright-page,
+.toc-page nav,
+.chapter section {
+  page-break-before: always;
+  break-before: page;
+}
+.half-title-page,
+.dedication-page,
+.epigraph-page,
+.blurbs-page,
+.title-page {
+  page-break-before: always;
+  break-before: page;
+}
+.half-title-page,
+.dedication-page,
+.epigraph-page {
+  min-height: 100vh;
+}
+.half-title-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.half-title-text {
+  font-size: 1.6em;
+  font-weight: bold;
+}
+.title-page {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.book-title {
+  margin-top: 0;
+  margin-bottom: 1.25em;
+  font-size: 1.8em;
+}
+.byline,
+.author-name {
+  text-align: center;
+}
+.author-name {
+  font-size: 1.2em;
+}
+.dedication-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+.epigraph-page {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.epigraph-page blockquote,
+.epigraph-page .epigraph-attribution {
+  text-indent: 0;
+}
+.scene-break {
+  height: 2.2em;
+}
+.also-by-list {
+  list-style: none;
+  margin-left: 0;
+}
+.also-by-list li {
+  text-align: center;
+  margin: 0.75em 0;
+}
+.toc-list {
+  list-style: none;
+  margin: 0;
+  padding-left: 0;
+}
+.toc-list li {
+  list-style: none;
+  margin: 0.2em 0;
+}
+.epigraph-block {
+  margin-top: 2em;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+.epigraph-block blockquote {
+  margin: 0 1.5em 1em 1.5em;
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+.epigraph-attribution {
+  text-align: right;
+  margin: 0 1.5em 0 1.5em;
+}
+img {
+  max-width: 100%;
+  height: auto;
+}`;
+    }
+
+    function makeHtmlCss() {
+      return `:root {
+  color-scheme: light;
+}
+html, body {
+  margin: 0;
+  padding: 0;
+  background: #f8fafc;
+  color: #0f172a;
+}
+body {
+  font-family: Palatino, Georgia, serif;
+  line-height: 1.25;
+}
+.book-shell {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 48px 24px 80px;
+  background: white;
+  min-height: 100vh;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+.book-cover {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin: 0 auto 3rem auto;
+  border-radius: 8px;
+}
+.book-section {
+  page-break-before: always;
+  break-before: page;
+  margin-top: 0;
+  margin-bottom: 0;
+  padding-top: 0;
+}
+.book-section + .book-section {
+  margin-top: 4rem;
+}
+h1 {
+  text-align: center;
+  font-weight: bold;
+  margin: 0 0 1.5em 0;
+}
+p {
+  margin: 0;
+  text-indent: 1.2em;
+}
+p + p {
+  margin-top: 0;
+}
+p.noindent,
+blockquote p,
+.title-page p,
+.copyright-page p,
+ul,
+ol,
+.scene-break + p,
+.epigraph-attribution,
+.half-title-text,
+.dedication-page p,
+.blurbs-page p,
+.blurbs-page blockquote p,
+.toc-list p {
+  text-indent: 0;
+}
+ul, ol {
+  margin: 0 0 1em 1.4em;
+  padding: 0;
+}
+li {
+  margin: 0.2em 0;
+}
+blockquote {
+  margin: 1em 1.5em;
+}
+.title-page,
+.half-title-page,
+.dedication-page,
+.epigraph-page {
+  min-height: 70vh;
+}
+.half-title-page,
+.dedication-page,
+.epigraph-page,
+.title-page {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+.half-title-page {
+  align-items: center;
+  text-align: center;
+}
+.half-title-text {
+  font-size: 1.6em;
+  font-weight: bold;
+}
+.book-title {
+  margin-top: 0;
+  margin-bottom: 1.25em;
+  font-size: 1.8em;
+}
+.byline,
+.author-name {
+  text-align: center;
+}
+.author-name {
+  font-size: 1.2em;
+}
+.dedication-page {
+  align-items: center;
+  text-align: center;
+}
+.epigraph-page blockquote,
+.epigraph-page .epigraph-attribution {
+  text-indent: 0;
+}
+.scene-break {
+  height: 2.2em;
+}
+.also-by-list {
+  list-style: none;
+  margin-left: 0;
+}
+.also-by-list li {
+  text-align: center;
+  margin: 0.75em 0;
+}
+.toc {
+  margin: 0 0 3rem 0;
+}
+.toc h1 {
+  margin-bottom: 1rem;
+}
+.toc-list {
+  list-style: none;
+  margin: 0;
+  padding-left: 0;
+}
+.toc-list li {
+  list-style: none;
+  margin: 0.25em 0;
+}
+.toc-list a {
+  color: inherit;
+  text-decoration: none;
+}
+.toc-list a:hover {
+  text-decoration: underline;
+}
+.epigraph-block {
+  margin-top: 2em;
+}
+.epigraph-block blockquote {
+  margin: 0 1.5em 1em 1.5em;
+}
+.epigraph-attribution {
+  text-align: right;
+  margin: 0 1.5em 0 1.5em;
+}
+hr.section-rule {
+  border: 0;
+  border-top: 1px solid #e2e8f0;
+  margin: 4rem 0;
+}`;
+    }
+
+    function generateUuid() {
+      if (window.crypto && crypto.randomUUID) return `urn:uuid:${crypto.randomUUID()}`;
+      const s = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        const r = (Math.random() * 16) | 0;
+        const v = c === 'x' ? r : (r & 0x3) | 0x8;
+        return v.toString(16);
+      });
+      return `urn:uuid:${s}`;
+    }
+
+    function makeHtmlSection({ id = '', className = '', body = '' }) {
+      const cls = ['book-section', className].filter(Boolean).join(' ');
+      return `<section${id ? ` id="${escapeXml(id)}"` : ''} class="${escapeXml(cls)}">${body}</section>`;
+    }
+
+    function makeHtmlTitlePage(meta) {
+      return makeHtmlSection({
+        id: 'title-page',
+        className: 'title-page',
+        body: `
+      <h1 class="book-title">${escapeXml(meta.title)}</h1>
+      <p class="byline">by</p>
+      <p class="author-name">${escapeXml(meta.author)}</p>
+    `
+      });
+    }
+
+    function makeHtmlCopyrightPage(meta, year) {
+      return makeHtmlSection({
+        id: 'copyright',
+        className: 'copyright-page',
+        body: `
+      <h1>Copyright</h1>
+      <p class="noindent">Copyright © ${year} ${escapeXml(meta.author)}</p>
+      <p>All rights reserved.</p>
+      <p>No part of this publication may be reproduced, distributed, or transmitted in any form or by any means, including photocopying, recording, or other electronic or mechanical methods, without the prior written permission of the copyright holder, except in the case of brief quotations embodied in reviews and certain other noncommercial uses permitted by copyright law.</p>
+      <p>This is a work of fiction unless otherwise indicated. Names, characters, businesses, places, events, and incidents are either the products of the author’s imagination or used in a fictitious manner. Any resemblance to actual persons, living or dead, or actual events is purely coincidental.</p>
+    `
+      });
+    }
+
+    function makeHtmlHeadinglessPage({ id, className, body }) {
+      return makeHtmlSection({
+        id,
+        className,
+        body
+      });
+    }
+
+    function makeHtmlStandardSection(section) {
+      return makeHtmlSection({
+        id: section.idBase,
+        className: '',
+        body: `
+      <h1>${escapeXml(section.heading)}</h1>
+      ${renderMarkdownLines(section.lines, { allowEmptyPage: true })}
+    `
+      });
+    }
+
+    function makeHtmlAlsoByPage(section, author) {
+      const items = section.lines
+        .map(line => line.trim())
+        .filter(Boolean)
+        .map(line => line.replace(/^-\s+/, '').trim())
+        .filter(Boolean);
+
+      const list = items.length
+        ? `<ul class="also-by-list">${items.map(item => `<li>${escapeXml(item)}</li>`).join('')}</ul>`
+        : '<p class="noindent">No titles listed.</p>';
+
+      return makeHtmlSection({
+        id: section.idBase,
+        className: 'also-by',
+        body: `
+      <h1>Also By ${escapeXml(author)}</h1>
+      ${list}
+    `
+      });
+    }
+
+    function makeHtmlToc(entries) {
+      const tocEntries = entries.filter(entry => entry.kind === 'chapter' || TOC_ALLOWED.has(headingKey(entry.label)));
+      const items = tocEntries.map(entry => (
+        `<li><a href="#${escapeXml(entry.anchor)}">${escapeXml(entry.label)}</a></li>`
+      )).join('\n');
+
+      return `<nav class="toc" aria-label="Table of Contents">
+    <h1>Table of Contents</h1>
+    <ul class="toc-list">${items}</ul>
+  </nav>`;
+    }
+
+    async function buildEpub({ markdown, coverFile }) {
+      const book = classifyBook(markdown);
+      if (book.errors.length) throw new Error(book.errors[0]);
+      const zip = new JSZip();
+      zip.file('mimetype', 'application/epub+zip', { compression: 'STORE' });
+      zip.folder('META-INF').file('container.xml', `<?xml version="1.0" encoding="UTF-8"?>
+<container version="1.0" xmlns="urn:oasis:names:tc:opendocument:xmlns:container">
+  <rootfiles>
+    <rootfile full-path="OEBPS/package.opf" media-type="application/oebps-package+xml"/>
+  </rootfiles>
+</container>`);
+
+      const oebps = zip.folder('OEBPS');
+      oebps.folder('styles').file('book.css', makeCss());
+
+      const year = new Date().getFullYear();
+      const identifier = generateUuid();
+      const modified = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z');
+      const manifestItems = [];
+      const spineItems = [];
+      const finalNavEntries = [];
+
+      const addPage = (id, href, content, navEntry = null) => {
+        oebps.file(href, content);
+        manifestItems.push(`<item id="${id}" href="${href}" media-type="application/xhtml+xml" />`);
+        spineItems.push(`<itemref idref="${id}" />`);
+        if (navEntry) finalNavEntries.push(navEntry);
+      };
+
+      const frontMap = new Map((book.frontMatter || []).map(section => [headingKey(section.heading), section]));
+      const backSections = sortSections([...(book.backMatter || []), ...(book.alsoBy ? [book.alsoBy] : [])], BACK_EXPORT_ORDER);
+
+      if (frontMap.has('blurbs')) {
+        const section = frontMap.get('blurbs');
+        addPage('front-blurbs', 'front-blurbs.xhtml', makeBlurbsPage(section), { label: section.heading, href: 'front-blurbs.xhtml', anchor: section.idBase, kind: 'frontmatter' });
+      }
+      if (frontMap.has('half title')) {
+        const section = frontMap.get('half title');
+        addPage('front-half-title', 'front-half-title.xhtml', makeHalfTitlePage(book.meta, section), { label: section.heading, href: 'front-half-title.xhtml', anchor: section.idBase, kind: 'frontmatter' });
+      }
+
+      addPage('title', 'title.xhtml', makeTitlePage(book.meta));
+      addPage('copyright', 'copyright.xhtml', makeCopyrightPage(book.meta, year));
+
+      if (frontMap.has('dedication')) {
+        const section = frontMap.get('dedication');
+        addPage('front-dedication', 'front-dedication.xhtml', makeDedicationPage(section), { label: section.heading, href: 'front-dedication.xhtml', anchor: section.idBase, kind: 'frontmatter' });
+      }
+      if (frontMap.has('epigraph')) {
+        const section = frontMap.get('epigraph');
+        addPage('front-epigraph', 'front-epigraph.xhtml', makeEpigraphPage(section), { label: section.heading, href: 'front-epigraph.xhtml', anchor: section.idBase, kind: 'frontmatter' });
+      }
+
+      ['foreword', 'introduction', 'preface', 'prologue'].forEach((key) => {
+        if (frontMap.has(key)) {
+          const section = frontMap.get(key);
+          const href = `front-${slugify(key)}.xhtml`;
+          addPage(`front-${slugify(key)}`, href, makeSectionPage(section, 'frontmatter', 'frontmatter'), { label: section.heading, href, anchor: section.idBase, kind: 'frontmatter' });
+        }
+      });
+
+      let chapterIndex = 1;
+      for (const section of book.chapters) {
+        const href = `chapter-${slugify(section.heading)}.xhtml`;
+        addPage(`chapter-${chapterIndex}`, href, makeSectionPage(section, 'bodymatter', 'chapter'), { label: section.heading, href, anchor: section.idBase, kind: 'chapter' });
+        chapterIndex += 1;
+      }
+
+      let backIndex = 1;
+      for (const section of backSections) {
+        const key = headingKey(section.heading);
+        if (key === 'also by') {
+          addPage('also-by', 'back-also-by.xhtml', makeAlsoByPage(section, book.meta.author), { label: 'Also By', href: 'back-also-by.xhtml', anchor: section.idBase, kind: 'backmatter' });
+        } else {
+          const href = `back-${slugify(section.heading)}.xhtml`;
+          addPage(`back-${backIndex}`, href, makeSectionPage(section, 'backmatter', 'backmatter'), { label: section.heading, href, anchor: section.idBase, kind: 'backmatter' });
+          backIndex += 1;
+        }
+      }
+
+      oebps.file('nav.xhtml', makeNav(finalNavEntries));
+      oebps.file('toc.ncx', makeNcx(book.meta, identifier, finalNavEntries));
+
+      let coverHref = '';
+      let coverMediaType = '';
+      if (coverFile) {
+        const extension = (coverFile.name.split('.').pop() || 'jpg').toLowerCase();
+        const safeExt = extension === 'png' ? 'png' : extension === 'webp' ? 'webp' : 'jpg';
+        coverMediaType = safeExt === 'png' ? 'image/png' : safeExt === 'webp' ? 'image/webp' : 'image/jpeg';
+        coverHref = `images/cover.${safeExt}`;
+        const bytes = await readFileAsArrayBuffer(coverFile);
+        oebps.folder('images').file(`cover.${safeExt}`, bytes);
+      }
+
+      oebps.file('package.opf', makeOpf({ meta: book.meta, identifier, modified, manifestItems, spineItems, coverHref, coverMediaType }));
+
+      return {
+        blob: await zip.generateAsync({ type: 'blob', mimeType: 'application/epub+zip', compression: 'DEFLATE' }),
+        filename: `${slugify(book.meta.title)}.epub`,
+        book
+      };
+    }
+
+    async function buildHtmlFile({ markdown, coverFile }) {
+      const book = classifyBook(markdown);
+      if (book.errors.length) throw new Error(book.errors[0]);
+
+      const year = new Date().getFullYear();
+      const frontMap = new Map((book.frontMatter || []).map(section => [headingKey(section.heading), section]));
+      const backSections = sortSections(
+        [...(book.backMatter || []), ...(book.alsoBy ? [book.alsoBy] : [])],
+        BACK_EXPORT_ORDER
+      );
+
+      const navEntries = [];
+      const parts = [];
+
+      let coverDataUrl = '';
+      if (coverFile) {
+        coverDataUrl = await readFileAsDataURL(coverFile);
+      }
+
+      if (coverDataUrl) {
+        parts.push(`<img src="${escapeXml(coverDataUrl)}" alt="Cover for ${escapeXml(book.meta.title)}" class="book-cover" />`);
+      }
+
+      if (frontMap.has('blurbs')) {
+        const section = frontMap.get('blurbs');
+        navEntries.push({ label: section.heading, anchor: section.idBase, kind: 'frontmatter' });
+        parts.push(makeHtmlHeadinglessPage({
+          id: section.idBase,
+          className: 'blurbs-page',
+          body: renderMarkdownLines(section.lines, { allowEmptyPage: true })
+        }));
+      }
+
+      if (frontMap.has('half title')) {
+        const section = frontMap.get('half title');
+        navEntries.push({ label: section.heading, anchor: section.idBase, kind: 'frontmatter' });
+        parts.push(makeHtmlHeadinglessPage({
+          id: section.idBase,
+          className: 'half-title-page',
+          body: `<p class="half-title-text">${escapeXml(book.meta.title)}</p>`
+        }));
+      }
+
+      parts.push(makeHtmlTitlePage(book.meta));
+      parts.push(makeHtmlCopyrightPage(book.meta, year));
+
+      if (frontMap.has('dedication')) {
+        const section = frontMap.get('dedication');
+        navEntries.push({ label: section.heading, anchor: section.idBase, kind: 'frontmatter' });
+        parts.push(makeHtmlHeadinglessPage({
+          id: section.idBase,
+          className: 'dedication-page',
+          body: renderMarkdownLines(section.lines, { allowEmptyPage: true })
+        }));
+      }
+
+      if (frontMap.has('epigraph')) {
+        const section = frontMap.get('epigraph');
+        const nonEmpty = section.lines.map(line => line.trim()).filter(Boolean);
+        const quoteLines = [];
+        const attributionLines = [];
+        let seenQuote = false;
+
+        for (const line of nonEmpty) {
+          if (line.startsWith('>')) {
+            seenQuote = true;
+            quoteLines.push(line.replace(/^>\s?/, '').trim());
+          } else if (seenQuote) {
+            attributionLines.push(line);
+          }
+        }
+
+        const body = quoteLines.length
+          ? `<div class="epigraph-block">
+          <blockquote><p>${applyInlineMarkdown(quoteLines.join(' '))}</p></blockquote>
+          ${attributionLines.length ? `<p class="epigraph-attribution">${applyInlineMarkdown(attributionLines.join(' '))}</p>` : ''}
+        </div>`
+          : renderMarkdownLines(section.lines, { allowEmptyPage: true });
+
+        navEntries.push({ label: section.heading, anchor: section.idBase, kind: 'frontmatter' });
+        parts.push(makeHtmlHeadinglessPage({
+          id: section.idBase,
+          className: 'epigraph-page',
+          body
+        }));
+      }
+
+      ['foreword', 'introduction', 'preface', 'prologue'].forEach((key) => {
+        if (frontMap.has(key)) {
+          const section = frontMap.get(key);
+          navEntries.push({ label: section.heading, anchor: section.idBase, kind: 'frontmatter' });
+          parts.push(makeHtmlStandardSection(section));
+        }
+      });
+
+      for (const section of book.chapters) {
+        navEntries.push({ label: section.heading, anchor: section.idBase, kind: 'chapter' });
+        parts.push(makeHtmlStandardSection(section));
+      }
+
+      for (const section of backSections) {
+        const key = headingKey(section.heading);
+        if (key === 'also by') {
+          navEntries.push({ label: 'Also By', anchor: section.idBase, kind: 'backmatter' });
+          parts.push(makeHtmlAlsoByPage(section, book.meta.author));
+        } else {
+          navEntries.push({ label: section.heading, anchor: section.idBase, kind: 'backmatter' });
+          parts.push(makeHtmlStandardSection(section));
+        }
+      }
+
+      const toc = makeHtmlToc(navEntries);
+
+      const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>${escapeXml(book.meta.title)} — ${escapeXml(book.meta.author)}</title>
+  <meta name="author" content="${escapeXml(book.meta.author)}" />
+  <style>
+${makeHtmlCss()}
+  </style>
+</head>
+<body>
+  <main class="book-shell">
+    ${toc}
+    ${parts.join('\n<hr class="section-rule" />\n')}
+  </main>
+</body>
+</html>`;
+
+      return {
+        blob: new Blob([html], { type: 'text/html;charset=utf-8' }),
+        filename: `${slugify(book.meta.title)}.html`,
+        book
+      };
+    }
+
+    function downloadBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+    }
+
+    function getInsertTemplate(value) {
+      const templates = {
+        'blurbs': `# Blurbs\n"A wonderful book."\n– Reviewer Name`,
+        'half-title': `# Half Title\nBook Title`,
+        'dedication': `# Dedication\nFor the ones who stayed.`,
+        'epigraph': `# Epigraph\n> We live by stories.\n– James Joyce`,
+        'foreword': `# Foreword\nWrite the foreword here.`,
+        'introduction': `# Introduction\nWrite the introduction here.`,
+        'preface': `# Preface\nWrite the preface here.`,
+        'prologue': `# Prologue\nWrite the prologue here.`,
+        'chapter': `# Chapter Title\nWrite the chapter here.`,
+        'epilogue': `# Epilogue\nWrite the epilogue here.`,
+        'afterword': `# Afterword\nWrite the afterword here.`,
+        'endnotes': `# Endnotes\n1. Add endnotes here.`,
+        'bibliography': `# Bibliography\n- Source Title`,
+        'references': `# References\n- Reference Title`,
+        'acknowledgments': `# Acknowledgments\nThank the people who helped here.`,
+        'about-the-author': `# About the Author\nWrite the author bio here.`,
+        'also-by': `# Also By\n- Title of Book\n- Title of Book`
+      };
+      return templates[value] || '';
+    }
+
+    function insertAtCursor(textarea, text) {
+      const start = textarea.selectionStart ?? textarea.value.length;
+      const end = textarea.selectionEnd ?? textarea.value.length;
+      const before = textarea.value.slice(0, start);
+      const after = textarea.value.slice(end);
+      const needsLeadingNewlines = before && !before.endsWith('\n\n') ? (before.endsWith('\n') ? '\n' : '\n\n') : '';
+      const needsTrailingNewlines = after && !after.startsWith('\n') ? '\n\n' : '';
+      const insertion = `${needsLeadingNewlines}${text}${needsTrailingNewlines}`;
+      textarea.value = before + insertion + after;
+      const cursor = (before + insertion).length;
+      textarea.focus();
+      textarea.setSelectionRange(cursor, cursor);
+    }
+
+    function setMessage(text) {
+      if (!text) {
+        messageEl.hidden = true;
+        messageEl.textContent = '';
+      } else {
+        messageEl.hidden = false;
+        messageEl.textContent = text;
+      }
+    }
+
+    function icon(ok) {
+      return ok
+        ? '<svg class="icon ok" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M16.704 5.29a1 1 0 010 1.42l-7.2 7.2a1 1 0 01-1.415 0l-3-3a1 1 0 111.414-1.42L8.8 11.79l6.49-6.5a1 1 0 011.414 0z" clip-rule="evenodd"/></svg>'
+        : '<svg class="icon warn" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.72-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.981-1.742 2.981H4.42c-1.53 0-2.492-1.647-1.742-2.98l5.58-9.921zM11 13a1 1 0 10-2 0 1 1 0 002 0zm-1-6a1 1 0 00-1 1v3a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>';
+    }
+
+    function renderState() {
+      const parsed = classifyBook(markdownEl.value);
+      generateBtn.disabled = parsed.errors.length > 0;
+      exportHtmlBtn.disabled = parsed.errors.length > 0;
+
+      const words = markdownEl.value.trim() ? markdownEl.value.trim().split(/\s+/).length : 0;
+      const sectionsCount = (parsed.frontMatter?.length || 0) + (parsed.chapters?.length || 0) + (parsed.backMatter?.length || 0) + (parsed.alsoBy ? 1 : 0);
+
+      quickStatsEl.innerHTML = `
+        <div class="stat">
+          <span class="stat-label">Words</span>
+          <span class="stat-value">${words.toLocaleString()}</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Sections</span>
+          <span class="stat-value">${sectionsCount}</span>
+        </div>
+        <div class="stat">
+          <span class="stat-label">Cover</span>
+          <span class="stat-value">${coverFile ? 'Attached' : 'None'}</span>
+        </div>
+      `;
+
+      const checklist = [];
+      if (parsed.meta) checklist.push({ ok: true, label: `Metadata line detected: ${parsed.meta.title} — ${parsed.meta.author}` });
+      checklist.push({ ok: parsed.errors.length === 0, label: parsed.errors[0] || 'Required H1 structure looks valid.' });
+      checklist.push({ ok: parsed.chapters.length > 0, label: parsed.chapters.length ? `${parsed.chapters.length} body chapter(s) found.` : 'No body chapters found.' });
+      checklist.push({ ok: true, label: 'The export order is fixed for supported front matter, chapters, and supported back matter.' });
+      checklist.push({ ok: true, label: 'Half Title, Title Page, Dedication, Epigraph, and Blurbs export without visible section headings.' });
+      checklist.push({ ok: true, label: 'The HTML TOC includes Foreword, Preface, Introduction, Prologue, chapters, Epilogue, Afterword, Endnotes, Bibliography / References, and Acknowledgments when present.' });
+      checklist.push({ ok: true, label: 'The HTML TOC excludes Blurbs, Half Title, Title Page, Copyright, Dedication, Epigraph, Table of Contents, About the Author, and Also By.' });
+      checklist.push({ ok: true, label: 'The NCX now matches the visible TOC inclusion rules.' });
+      checklist.push({ ok: true, label: 'Scene breaks written as *** become blank vertical spacing.' });
+      checklist.push({ ok: true, label: 'Paragraphs are indented, with first paragraphs and post-scene-break paragraphs unindented.' });
+      checklist.push({ ok: true, label: 'HTML export matches the ebook reading order and visible presentation as closely as possible.' });
+      checklist.push({ ok: !!coverFile, label: coverFile ? 'Internal cover image will be embedded in the EPUB package and HTML export.' : 'No cover uploaded yet.' });
+
+      structureEl.innerHTML = `
+        ${parsed.meta ? `
+          <div class="meta-list">
+            <div><strong>Title:</strong> ${escapeXml(parsed.meta.title)}</div>
+            <div><strong>Author:</strong> ${escapeXml(parsed.meta.author)}</div>
+          </div>
+        ` : '<div class="subtle">No valid title metadata found yet.</div>'}
+        <div style="margin-top:16px;">
+          <div style="font-weight:700; margin-bottom:8px;">Front matter</div>
+          <div class="tag-wrap">${parsed.frontMatter.length ? parsed.frontMatter.map(s => `<span class="tag">${escapeXml(s.heading)}</span>`).join('') : '<span class="subtle">None</span>'}</div>
+        </div>
+        <div style="margin-top:16px;">
+          <div style="font-weight:700; margin-bottom:8px;">Chapters</div>
+          <div class="tag-wrap">${parsed.chapters.length ? parsed.chapters.map(s => `<span class="tag">${escapeXml(s.heading)}</span>`).join('') : '<span class="subtle">None</span>'}</div>
+        </div>
+        <div style="margin-top:16px;">
+          <div style="font-weight:700; margin-bottom:8px;">Back matter</div>
+          <div class="tag-wrap">${([...(parsed.backMatter || []), ...(parsed.alsoBy ? [parsed.alsoBy] : [])].length) ? [...(parsed.backMatter || []), ...(parsed.alsoBy ? [parsed.alsoBy] : [])].map(s => `<span class="tag outline">${escapeXml(s.heading)}</span>`).join('') : '<span class="subtle">None</span>'}</div>
+        </div>
+      `;
+
+      checklistEl.innerHTML = checklist.map(item => `<div class="check">${icon(item.ok)}<div>${escapeXml(item.label)}</div></div>`).join('');
+
+      let notes = '';
+      parsed.errors.forEach(err => notes += `<div class="error-box">${escapeXml(err)}</div>`);
+      parsed.warnings.forEach(warn => notes += `<div class="warn-box">${escapeXml(warn)}</div>`);
+      if (!notes) notes = '<div class="subtle">No structural issues detected in the current draft.</div>';
+      notesEl.innerHTML = notes;
+    }
+
+    markdownEl.addEventListener('input', () => {
+      setMessage('');
+      renderState();
+    });
+
+    coverEl.addEventListener('change', async (event) => {
+      coverFile = event.target.files && event.target.files[0] ? event.target.files[0] : null;
+      coverMeta = null;
+      setMessage('');
+
+      if (!coverFile) {
+        coverPreviewEl.hidden = true;
+        coverPreviewEl.removeAttribute('src');
+        coverDimensionsEl.textContent = '';
+        renderState();
+        return;
+      }
+
+      try {
+        const url = URL.createObjectURL(coverFile);
+        const img = new Image();
+        img.onload = function() {
+          coverMeta = { width: img.width, height: img.height, url };
+          coverPreviewEl.src = url;
+          coverPreviewEl.hidden = false;
+          coverDimensionsEl.textContent = `${img.width} × ${img.height}px`;
+          renderState();
+        };
+        img.onerror = function() {
+          coverPreviewEl.hidden = true;
+          coverDimensionsEl.textContent = '';
+          renderState();
+          setMessage('Could not inspect the cover image, but it can still be embedded.');
+        };
+        img.src = url;
+      } catch (e) {
+        setMessage('Could not inspect the cover image, but it can still be embedded.');
+        renderState();
+      }
+    });
+
+    insertBtn.addEventListener('click', () => {
+      const value = insertSectionEl.value;
+      const template = getInsertTemplate(value);
+      if (!template) {
+        setMessage('Choose a section to insert.');
+        return;
+      }
+      insertAtCursor(markdownEl, template);
+      setMessage('Section template inserted.');
+      renderState();
+    });
+
+    generateBtn.addEventListener('click', async () => {
+      generateBtn.disabled = true;
+      const priorText = generateBtn.textContent;
+      generateBtn.textContent = 'Generating…';
+      setMessage('');
+      try {
+        const result = await buildEpub({ markdown: markdownEl.value, coverFile });
+        downloadBlob(result.blob, result.filename);
+        setMessage(`EPUB generated: ${result.filename}`);
+      } catch (error) {
+        setMessage(error && error.message ? error.message : 'Failed to generate EPUB.');
+      } finally {
+        generateBtn.textContent = priorText;
+        renderState();
+      }
+    });
+
+    exportHtmlBtn.addEventListener('click', async () => {
+      exportHtmlBtn.disabled = true;
+      const priorText = exportHtmlBtn.textContent;
+      exportHtmlBtn.textContent = 'Exporting…';
+      setMessage('');
+      try {
+        const result = await buildHtmlFile({ markdown: markdownEl.value, coverFile });
+        downloadBlob(result.blob, result.filename);
+        setMessage(`HTML exported: ${result.filename}`);
+      } catch (error) {
+        setMessage(error && error.message ? error.message : 'Failed to export HTML.');
+      } finally {
+        exportHtmlBtn.textContent = priorText;
+        renderState();
+      }
+    });
+
+    renderState();
+  </script>
+</body>
+</html>
